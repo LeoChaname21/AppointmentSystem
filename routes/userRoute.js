@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/userModel");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 router.post("/register", async (req, res) => {
 
@@ -24,6 +25,7 @@ router.post("/register", async (req, res) => {
         res.status(200).send({ message: "Usuario Creado Exitosamente", success: true });
 
     } catch (error) {
+        console.log(error);
         res.status(500).send({ message: "Error al crear usuario", success: false, error });
 
     }
@@ -35,6 +37,7 @@ router.get("/list", async (req, res) => {
         const users = await User.find({});
         res.status(200).send({ message: "Usuarios encontrados", success: true, users });
     } catch (error) {
+        console.log(error);
         res.status(500).send({ message: "Error al obtener usuarios", success: false, error });
     }
 });
@@ -42,9 +45,24 @@ router.get("/list", async (req, res) => {
 router.post("/login", async (req, res) => {
 
     try {
+        const user = await User.findOne({ email: req.body.email });
+        if(!user){
+            return res.status(200).send({ message: "Usuario no existe", success: false});
+        }
+        const isMatch = await bcrypt.compare(req.body.password, user.password);
+        if(!isMatch){
+            return res.status(200).send({ message:"La contraseña es incorrecta", success:false});
+        }
+        else{
+        const token = jwt.sign({id: user._id}, process.env.JWT_SECRET,{
+            expiresIn: "1d"
+        })
+        res.status(200).send({ message: "Ha accedido exitosamente", success: true, data:token});
+        } 
 
     } catch (error) {
-
+        console.log(error);
+        res.status(500).send({ message: "Error al iniciar sesión", success: false, error });
     }
 
 });
