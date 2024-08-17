@@ -104,18 +104,24 @@ router.post("/get-user-info-by-id", authMiddleware, async (req, res) => {
 
 });
 
-router.post("/delete", async (req, res) => {
+router.post("/delete", authMiddleware, async (req, res) => {
     try {
+        const userId = await User.findOne({ _id: req.body.userId });
+        if (userId.isAdmin) {
 
-        if (!mongoose.Types.ObjectId.isValid(req.body._id)) {
-            return res.status(400).send({ message: "ID inválido", success: false });
+            if (!mongoose.Types.ObjectId.isValid(req.body._id)) {
+                return res.status(400).send({ message: "ID inválido", success: false });
+            }
+            const user = await User.findOne({ _id: req.body._id });
+            if (!user) {
+                return res.status(200).send({ message: "Usuario no existe", success: false });
+            } else {
+                await User.deleteOne({ _id: req.body._id });
+                res.status(200).send({ message: "Usuario Eliminado Exitosamente", success: true });
+            }
         }
-        const user = await User.findOne({ _id: req.body._id });
-        if (!user) {
-            return res.status(200).send({ message: "Usuario no existe", success: false });
-        } else {
-            await User.deleteOne({ _id: req.body._id });
-            res.status(200).send({ message: "Usuario Eliminado Exitosamente", success: true });
+        else{
+            return res.status(400).send({ message: "Usuario no tiene permisos necesarios", success: false });
         }
 
     } catch (error) {
@@ -125,8 +131,12 @@ router.post("/delete", async (req, res) => {
 });
 
 
-router.post("/update", async (req, res) => {
+router.post("/update", authMiddleware , async (req, res) => {
     try {
+        const userId = await User.findOne({ _id: req.body.userId });
+        if(userId.isAdmin)
+        {
+
         if (!mongoose.Types.ObjectId.isValid(req.body._id)) {
             return res.status(400).send({ message: "ID inválido", success: false });
         }
@@ -139,7 +149,9 @@ router.post("/update", async (req, res) => {
             res.status(200).send({ message: "Usuario Editado Exitosamente", success: true });
 
         }
-
+    }else {
+        return res.status(400).send({ message: "Usuario no tiene permisos necesarios", success:false})
+    }
 
     } catch (error) {
         console.log(error);
