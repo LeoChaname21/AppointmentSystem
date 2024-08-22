@@ -40,7 +40,7 @@ router.get("/list", authMiddleware, async (req, res) => {
         const users = await User.find({});
         res.status(200).send({
             message: "Usuarios encontrados", success: true,
-            users: users
+            data: users
         });
     } catch (error) {
         console.log(error);
