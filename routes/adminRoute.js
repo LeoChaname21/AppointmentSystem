@@ -45,11 +45,11 @@ router.get("/get-all-doctors", authMiddleware, async (req, res) => {
 });
 
 
-router.post("/change-doctor-status", authMiddleware, async (req, res) => {
+router.post("/change-doctor-account-status", authMiddleware, async (req, res) => {
     try {
-        const {doctorId,status,userIde} = req.body;
+        const {doctorId,status} = req.body;
         const doctor = await Doctor.findByIdAndUpdate(doctorId,{ status });
-        const user = await User.findOne({_id: userIde});
+        const user = await User.findOne({_id: doctor.userId});
 
         const unseenNotifications = user.unseenNotifications;
         
@@ -58,7 +58,8 @@ router.post("/change-doctor-status", authMiddleware, async (req, res) => {
             message: `Tu cuenta de doctor ha sido ${status}`,
             onclickPath: "/notifications"
         })
-        await User.findByIdAndUpdate(user._id,{ unseenNotifications });
+        user.isDoctor = status === "approved" ? true : false;
+        await user.save();
 
         res.status(200).send({
             message:"Estado del doctor actualizado correctamente",
