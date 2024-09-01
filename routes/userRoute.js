@@ -2,10 +2,12 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/userModel");
 const Doctor = require("../models/doctorModel");
+const Appointment = require("../models/appointmentModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const authMiddleware = require("../middlewares/authmiddleware");
 const mongoose = require("mongoose");
+const moment = require("moment");
 
 router.post("/register", async (req, res) => {
 
@@ -232,7 +234,114 @@ router.post("/delete-all-notifications", authMiddleware, async (req, res) => {
         });
     }
 
-})
+});
+
+router.get("/get-all-approved-doctors", authMiddleware, async (req, res) => {
+    try {
+        const doctors = await Doctor.find({ status: "approved" });
+        res.status(200).send({
+            message: "Doctores encontrados",
+            success: true,
+            data: doctors
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(200).send({
+            message: "Error al encontrar doctores",
+            success: false,
+            error
+        });
+
+    }
+});
+
+router.post("/book-appointment", authMiddleware, async (req, res) => {
+    try {
+        req.body.status = "pending";
+        req.body.date = moment(req.body.date,"DD-MM-YYYY").toISOString();
+        req.body.time = moment(req.body.time,"HH:mm").toISOString();
+        const newappointment = new Appointment(req.body);
+        await newappointment.save();
+        const user = await User.findOne({ _id: req.body.doctorInfo.userId });
+        user.unseenNotifications.push({
+            type: "new-appointment-request",
+            message: `Una nueva cita se ha realizado por ${req.body.userInfo.name}`,
+            onclickPath: "/doctor/appointments"
+        });
+        await user.save();
+        res.status(200).send({
+            message: "La cita ha sido registrada con exito",
+            success: true
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({
+            message: "Error al registrar la cita",
+            success: false,
+            error
+        });
+
+    }
+
+});
+
+router.post("/check-booking-avilability",authMiddleware, async(req,res)=>{
+    try {
+        const date = moment(req.body.date, "DD-MM-YYYY").toISOString();
+        const fromTime = moment(req.body.time, "HH:mm").subtract(59 ,"minutes").toISOString();
+        const toTime = moment(req.body.time, "HH:mm").add(59, "minutes").toISOString();
+        const doctorId = req.body.doctorId;
+        const appointments = await Appointment.find({
+           doctorId,
+           date,
+           time: {$gte: fromTime, $lte: toTime },
+        });
+
+        if(appointments.length > 0){
+            return res.status(200).send({
+                message: "Cita no disponible",
+                success: false
+            })
+        }
+        else{
+            return res.status(200).send({
+                message: "Cita disponible",
+                success: true
+            })
+        }
+        
+        
+    } catch (error) {
+        console.log(error);
+
+        res.status(500).send({
+            message: "Error al ver la disponibilidad de la cita",
+            success: false,
+            error
+        })
+        
+    }
+});
+
+router.post("/get-appointments-by-user-id",authMiddleware,async(req,res)=>{
+    try {
+        const appointments = await Appointment.find({userId: req.body.userId});
+        res.status(200).send({
+            message: "Citas encontradas",
+            success: true,
+            data: appointments
+        })
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({
+            message: "Error al encontrar citas",
+            sucess: false,
+            error
+        })
+        
+    }
+});
 
 
 module.exports = router;
