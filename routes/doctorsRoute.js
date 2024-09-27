@@ -4,7 +4,9 @@ const Doctor = require("../models/doctorModel");
 const User = require("../models/userModel");
 const Appointment = require("../models/appointmentModel");
 const authmiddleware = require("../middlewares/authmiddleware");
-const { findOne } = require("../models/userModel");
+const moment = require("moment");
+const {whatsapp}= require("../lib/whatsapp");
+
 
 router.post("/get-doctor-info-by-user-id", authmiddleware, async (req, res) => {
     try {
@@ -106,6 +108,56 @@ router.post("/change-status", authmiddleware, async (req, res) => {
     } catch (error) {
         res.status(500).send({
             message: "Error al cambiar el estado de la cita",
+            sucess: false,
+            error
+        });
+
+    }
+});
+
+router.post("/sendmessage", authmiddleware, async (req,res) => {
+    try {
+        const {appointmentId} = req.body;
+        const appointment = await Appointment.findOne({ _id: appointmentId });
+
+        if (appointment.status === "approved") {
+
+            const user = await User.findOne({ _id: appointment.userId });
+            const doctor = await Doctor.findOne({ userId: req.body.userId });
+
+            const tel = '+51' + user.phonenumber;
+            const normalDate = moment(appointment.date).format("DD-MM-YYYY");
+            const normalTime = moment(appointment.time).format("HH:mm");
+            console.log(tel);
+            const chatId = tel.substring(1) + "@c.us";
+            const number_details = await whatsapp.getNumberId(chatId);
+            if (number_details) {
+                const mensaje = "¡Hola " + user.name + "!" + " Se ha aprobado su cita con el Doctor " +
+                    doctor.firstName + " " + doctor.lastname +
+                    " a las " + normalTime + " el dia " + normalDate;
+                await whatsapp.sendMessage(chatId, mensaje);
+                res.status(200).send({
+                    message: `Mensaje mandado correctamente`,
+                    sucess: true,
+                });
+            }
+            else {
+                res.status(200).send({
+                    message: "El numero no existe en whatsapp",
+                    success: false
+                });
+            }
+        }
+        else {
+            res.status(200).send({
+                message: "La cita todavía no ha sido aceptada",
+                success: false
+            })
+        }
+
+    } catch (error) {
+        res.status(500).send({
+            message: "Error al mandar mensaje",
             sucess: false,
             error
         });

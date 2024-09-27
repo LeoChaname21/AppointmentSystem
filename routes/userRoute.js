@@ -8,6 +8,7 @@ const jwt = require("jsonwebtoken");
 const authMiddleware = require("../middlewares/authmiddleware");
 const mongoose = require("mongoose");
 const moment = require("moment");
+const {whatsapp}= require("../lib/whatsapp");
 
 router.post("/register", async (req, res) => {
 
@@ -259,7 +260,9 @@ router.get("/get-all-approved-doctors", authMiddleware, async (req, res) => {
 router.post("/book-appointment", authMiddleware, async (req, res) => {
     try {
         req.body.status = "pending";
+        const dcita = req.body.date;
         req.body.date = moment(req.body.date,"DD-MM-YYYY").toISOString();
+        const hcita = req.body.time;
         req.body.time = moment(req.body.time,"HH:mm").toISOString();
         const newappointment = new Appointment(req.body);
         await newappointment.save();
@@ -270,10 +273,30 @@ router.post("/book-appointment", authMiddleware, async (req, res) => {
             onclickPath: "/doctor/appointments"
         });
         await user.save();
-        res.status(200).send({
-            message: "La cita ha sido registrada con exito",
-            success: true
-        });
+
+        const tel = '+51'+req.body.userInfo.phonenumber;
+        console.log(tel);
+        const chatId = tel.substring(1) + "@c.us";
+        const number_details = await whatsapp.getNumberId(chatId);
+        if(number_details){
+            const mensaje = "¡Hola "+req.body.userInfo.name+"!"+" Se ha registrado su cita con el Doctor "+
+            req.body.doctorInfo.firstName + " "+ req.body.doctorInfo.lastname+
+            " a las "+ hcita +" el dia "+dcita;
+            await whatsapp.sendMessage(chatId,mensaje);
+            res.status(200).send({
+                message: "La cita ha sido registrada con exito",
+                success: true
+            });
+        }
+        else{
+            res.status(200).send({
+                message: "se dio la cita pero no se ha mandado el mensaje de wsp",
+                success: true
+            });
+        }
+        
+        
+
     } catch (error) {
         console.log(error);
         res.status(500).send({

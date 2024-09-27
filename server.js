@@ -1,4 +1,5 @@
 const express = require("express");
+const {whatsapp} = require("./lib/whatsapp");
 
 const app = express();
 
@@ -21,6 +22,8 @@ app.use("/api/admin",adminRoute);
 app.use("/api/doctor",doctorRoute);
 
 const port = process.env.PORT || 5000;
+
+whatsapp.initialize();
 
 
 app.listen(port, () => console.log(`Node server started at port ${port}`));
