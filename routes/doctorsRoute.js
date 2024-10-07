@@ -115,7 +115,7 @@ router.post("/change-status", authmiddleware, async (req, res) => {
     }
 });
 
-router.post("/sendmessage", authmiddleware, async (req,res) => {
+router.post("/sendmessageconfirmation", authmiddleware, async (req,res) => {
     try {
         const {appointmentId} = req.body;
         const appointment = await Appointment.findOne({ _id: appointmentId });

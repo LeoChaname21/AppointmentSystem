@@ -347,6 +347,27 @@ router.post("/check-booking-avilability",authMiddleware, async(req,res)=>{
     }
 });
 
+router.post("/get-appointments-reserved-day",authMiddleware,async(req,res)=>{
+    try {
+        const date = moment(req.body.date, "DD-MM-YYYY").toISOString();
+        const appointments = await Appointment.find({date: date});
+        res.status(200).send({
+            message: "Citas encontradas de esta fecha",
+            success: true,
+            data: appointments.map(a=>moment(a.time).format("HH:mm"))
+        })
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({
+            message: "Error al encontrar citas",
+            sucess: false,
+            error
+        })
+        
+    }
+});
+
+
 router.post("/get-appointments-by-user-id",authMiddleware,async(req,res)=>{
     try {
         const appointments = await Appointment.find({userId: req.body.userId});
